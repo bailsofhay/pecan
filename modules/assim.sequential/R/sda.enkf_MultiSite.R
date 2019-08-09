@@ -659,7 +659,7 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
     
     if ((t%%2==0 | t==nt) & (control$TimeseriesPlot))   post.analysis.multisite.ggplot(settings, t, obs.times, obs.mean, obs.cov, FORECAST, ANALYSIS ,plot.title=control$plot.title, facetg=control$facet.plots, readsFF=readsFF)
     #Saving the profiling result
-    if (control$Profiling) alltocs(file.path(settings$outdir,"SDA", "Profiling.csv"))
+    if (control$Profiling) alltocs(file.path(settings$outdir, "Profiling.csv"))
     
     # },error = function(e) {
     #   # If it breaks at some steps then I lose all the info on the other variables that worked fine up to the step before the break
@@ -690,7 +690,7 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
   #output list of job.sh files that were force run
   if (forceRun)
   {
-    write.csv(bad_run, file = paste0(getwd(), "/SDA/job_files_force_run.csv"))
+    write.csv(bad_run, file = paste0(getwd(), "/job_files_force_run.csv"))
   }
   
 } # sda.enkf
