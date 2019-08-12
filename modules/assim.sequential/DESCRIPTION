@@ -21,7 +21,8 @@ Imports:
     tictoc, 
     purrr,
     furrr,
-    coda
+    coda,
+    XML
 Suggests:
     testthat
 License: FreeBSD + file LICENSE
