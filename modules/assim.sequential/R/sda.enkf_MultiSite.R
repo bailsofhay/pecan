@@ -71,6 +71,8 @@ sda.enkf.multisite <- function(outfolder,
     
     XML::saveXML(xml, file = file.path(getwd(),settings$xml.file))
     settings = PEcAn.settings::prepare.settings(read.settings(unlist(settings$xml.file)))
+  } else {
+    outfolder = settings$outdir
   }
   adjustment <- settings$state.data.assimilation$adjustment
   model      <- settings$model$type
@@ -496,6 +498,7 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
     
     
     FORECAST[[obs.t]] <- X
+    
     ###-------------------------------------------------------------------###
     ###  preparing OBS                                                    ###
     ###-------------------------------------------------------------------###---- 
@@ -651,7 +654,7 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
          enkf.params,
          new.state, new.params,params.list,
          out.configs, ensemble.samples, inputs, Viz.output,
-         file = file.path(settings$outdir, "sda.output.Rdata"))
+         file = file.path(settings$outfolder, "sda.output.Rdata"))
     
     tic(paste0("Visulization for cycle = ", t))
     
@@ -659,7 +662,7 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
     
     if ((t%%2==0 | t==nt) & (control$TimeseriesPlot))   post.analysis.multisite.ggplot(settings, t, obs.times, obs.mean, obs.cov, FORECAST, ANALYSIS ,plot.title=control$plot.title, facetg=control$facet.plots, readsFF=readsFF)
     #Saving the profiling result
-    if (control$Profiling) alltocs(file.path(settings$outdir, "Profiling.csv"))
+    if (control$Profiling) alltocs(file.path(settings$outfolder, "Profiling.csv"))
     
     # },error = function(e) {
     #   # If it breaks at some steps then I lose all the info on the other variables that worked fine up to the step before the break
