@@ -223,7 +223,7 @@ get.ensemble.samples <- function(ensemble.size, pft.samples, env.samples,
 ##' @export
 ##' @author David LeBauer, Carl Davidson
 write.ensemble.configs <- function(defaults, ensemble.samples, settings, model, 
-                                   clean = FALSE, write.to.db = TRUE) {
+                                   clean = FALSE, write.to.db = TRUE, date = NULL) {
   
   .Deprecated(
     new = "PEcAn.uncertainty::write.ensemble.configs",
@@ -285,7 +285,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
     if (!is.null(con)) {
       paramlist <- paste("ensemble=", counter, sep = "")
       run.id <- PEcAn.DB::db.query(paste0(
-        "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list) ",
+        "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list, date) ",
         "values ('", 
           settings$model$id, "', '", 
           settings$run$site$id, "', '", 
@@ -293,7 +293,8 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
           settings$run$end.date, "', '", 
           settings$run$outdir, "', ", 
           ensemble.id, ", '", 
-          paramlist, "') ",
+          paramlist, ", '",
+          obs.t, "') ",
         "RETURNING id"), con = con)[['id']]
       
       # associate inputs with runs
@@ -335,6 +336,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
         "hostname    : ", settings$host$name, "\n",
         "rundir      : ", file.path(settings$host$rundir, run.id), "\n",
         "outdir      : ", file.path(settings$host$outdir, run.id), "\n",
+        "date        : ", obs.t, "\n",
         file = file.path(settings$rundir, run.id, "README.txt"))
     
     do.call(my.write.config, args = list(

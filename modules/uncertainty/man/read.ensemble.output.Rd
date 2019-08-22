@@ -5,7 +5,7 @@
 \title{Read ensemble output}
 \usage{
 read.ensemble.output(ensemble.size, pecandir, outdir, start.year, end.year,
-  variable, ens.run.ids = NULL)
+  variable, ens.run.ids = NULL, date = NULL)
 }
 \arguments{
 \item{ensemble.size}{the number of ensemble members run}

@@ -556,8 +556,11 @@ post.analysis.multisite.ggplot <- function(settings, t, obs.times, obs.mean, obs
     obs.mean[name] = data_mean
     obs.cov[name] = data_cov
   }
+  end_year = "2009"
+  years = lubridate::year(names(obs.mean))
+  obs.mean = obs.mean[which(years <= end_year)]
+  obs.cov = obs.cov[which(years <= end_year)]
   
-
   if (!('ggrepel' %in% installed.packages()[,1])) devtools::install_github("slowkow/ggrepel")
 
   #Defining some colors

@@ -74,6 +74,7 @@ sda.enkf.multisite <- function(outfolder,
   } else {
     outfolder = settings$outdir
   }
+  settings$outfolder = outfolder
   adjustment <- settings$state.data.assimilation$adjustment
   model      <- settings$model$type
   write      <- settings$database$bety$write
@@ -111,6 +112,7 @@ sda.enkf.multisite <- function(outfolder,
   state.interval <- cbind(as.numeric(lapply(settings$state.data.assimilation$state.variables,'[[','min_value')),
                           as.numeric(lapply(settings$state.data.assimilation$state.variables,'[[','max_value')))
   rownames(state.interval) <- var.names
+  
   #------------------------------Multi - site specific - settings
   #Here I'm trying to make a temp config list name and put it into map to iterate
   if(multi.site.flag){
@@ -140,7 +142,8 @@ sda.enkf.multisite <- function(outfolder,
     start.cut <- lubridate::ymd_hms(settings$state.data.assimilation$start.date, truncated = 3)
     Start.Year <- (lubridate::year(settings$state.data.assimilation$start.date))
   }
-End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years that assimilations will be done for - obs will be subsetted based on this
+
+  End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years that assimilations will be done for - obs will be subsetted based on this
   assimyears <- Start.Year:End.Year
   obs.mean <- obs.mean[sapply(year(names(obs.mean)), function(obs.year) obs.year %in% (assimyears))]
   obs.cov <- obs.cov[sapply(year(names(obs.cov)), function(obs.year) obs.year %in% (assimyears))]
@@ -301,6 +304,12 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
     obs.t<-names(obs.mean)[t]
     obs.year <- year(obs.t)
     
+    if (t == 1)
+    {
+      observed_date = obs.year
+    } else {
+      observed_date = obs.t
+    }
     ###-------------------------------------------------------------------------###
     ###  Taking care of Forecast. Splitting /  Writting / running / reading back###
     ###-------------------------------------------------------------------------###-----  
@@ -364,13 +373,14 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
         # Loading the model package - this is required bc of the furrr
         library(paste0("PEcAn.",model), character.only = TRUE)
         # wrtting configs for each settings - this does not make a difference with the old code
-        write.ensemble.configs(
+        PEcAn.uncertainty::write.ensemble.configs(
           defaults = settings$pfts,
           ensemble.samples = ensemble.samples,
           settings = settings,
           model = settings$model$type,
           write.to.db = settings$database$bety$write,
-          restart = restart.arg
+          restart = restart.arg,
+          obs.t = gsub("-", "_", observed_date)
         )
       }) %>%
       setNames(site.ids)
@@ -383,13 +393,13 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
     #-------------------------------------------- RUN
     tic(paste0("Running models for cycle = ", t))
     if (control$debug) browser()
-    PEcAn.remote::start.model.runs(settings, settings$database$bety$write)
+    PEcAn.remote::start.model.runs(settings, settings$database$bety$write) #d, date = gsub("-", "_", as.character(obs.t)))
     
     # this is the option to force job.sh files that are randomly not being run by the SDA
-    if (forceRun && T > 1)
+    if (forceRun & t > 1)
     {
       # quick fix for job.sh files not getting run
-      folders <- list.files(path = settings$outdir, include.dirs = TRUE, full.names = TRUE)
+      folders <- list.files(path = settings$modeloutdir, include.dirs = TRUE, full.names = TRUE)
       for (i in seq_along(folders))
       {
         files <- list.files(path = folders[i], pattern = ".nc")
@@ -398,9 +408,9 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
         {
           files <- files[-remove]
         }
-        if (!(paste0(obs.year, '.nc') %in% files))
+        if (!(paste0(gsub("-", "_", observed_date), '.nc') %in% files))
         {
-          bad <- paste0("job.sh file not run for this .nc file ", folders[i], "/", obs.year, ".nc")
+          bad <- paste0("job.sh file not run for this .nc file ", folders[i], "/", gsub("-", "_", observed_date), ".nc")
           PEcAn.logger::logger.warn(paste0("WARNING: ", bad))
           file <- paste0(gsub("out", "run", folders[i]), "/", "job.sh")
           system(paste0("sh ", file))
@@ -453,25 +463,26 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
       furrr::future_map(function(configs) {
         # Loading the model package - this is required bc of the furrr
         library(paste0("PEcAn.",model), character.only = TRUE)
-        
+
         X_tmp <- vector("list", 2)
-        
+
         for (i in seq_len(nens)) {
           X_tmp[[i]] <- do.call( my.read_restart,
                                  args = list(
                                    outdir = outdir,
                                    runid = configs$runs$id[i] %>% as.character(),
-                                   stop.time = obs.times[t],
+                                   stop.time = obs.t,
                                    settings = settings,
                                    var.names = var.names,
-                                   params = new.params[[i]]
+                                   params = new.params[[i]],
+                                   obs.t = obs.t
                                  )
           )
-          
+
         }
         return(X_tmp)
       })
-    
+
     if (control$debug) browser()
     #let's read the parameters of each site/ens
     params.list <- reads %>% map(~.x %>% map("params"))
@@ -491,6 +502,8 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
       X <- X %>%
       map_dfc(~.x) %>% 
       as.matrix() %>%
+      ##### **** changed the number of repititions because it didn't make sense
+      #`colnames<-`(c(rep(var.names, length(X)/length(var.names)))) %>%
       `colnames<-`(c(rep(var.names, length(X)))) %>%
       `attr<-`('Site',c(rep(site.ids, each=length(var.names))))
     
@@ -512,7 +525,12 @@ End.Year <- lubridate::year(settings$state.data.assimilation$end.date) # years t
       
       if (length(Y) > 1) {
         PEcAn.logger::logger.info("The zero variances in R and Pf is being replaced by half and one fifth of the minimum variance in those matrices respectively.")
+        if (all(diag(R) == 0)) {
+          # filler number in case all sd's are 0 for some reason. Shouldn't be, but will crash the SDA. Should look for a better number.
+          diag(R) = 0.1
+        }
         diag(R)[which(diag(R)==0)] <- min(diag(R)[which(diag(R) != 0)])/2
+        
       }
       # making the mapping operator
       H <- Construct.H.multisite(site.ids, var.names, obs.mean[[t]])

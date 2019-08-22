@@ -61,9 +61,13 @@ sipnet2datetime <- function(sipnet_tval, base_year, base_month = 1,
 ##'
 ##' @export
 ##' @author Shawn Serbin, Michael Dietze
+##' 
+##'     model2netcdf.SIPNET('/data/bmorrison/sda/lai/4_sites_8_days/out/ENS-00001-676', 45.805925, -90.07961, '1980-01-01', '2009-12-31', FALSE, 'r136', '2000_02_18')
 model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, delete.raw, revision, 
-                                overwrite = FALSE) {
+                                overwrite = FALSE, obs.t = NULL) {
 
+  date = obs.t
+  
   ### Read in model output in SIPNET format
   sipnet_out_file <- file.path(outdir, "sipnet.out")
   sipnet_output <- read.table(sipnet_out_file, header = T, skip = 1, sep = "")
@@ -98,9 +102,10 @@ model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, 
 
   timestep.s <- 86400 / out_day
   
+  #end_date = as.Date(end_date)
   ### Loop over years in SIPNET output to create separate netCDF outputs
   for (y in simulation_years) {
-    if (file.exists(file.path(outdir, paste(y, "nc", sep = "."))) & overwrite == FALSE) {
+    if (file.exists(file.path(outdir, paste(y, "_", date, ".nc", sep = ""))) & overwrite == FALSE) {
       next
     }
     print(paste("---- Processing year: ", y))  # turn on for debugging
@@ -242,9 +247,17 @@ model2netcdf.SIPNET <- function(outdir, sitelat, sitelon, start_date, end_date, 
     
     # ******************** Create netCDF and output variables ********************#
     ### Output netCDF data
-    nc      <- ncdf4::nc_create(file.path(outdir, paste(y, "nc", sep = ".")), nc_var)
-    ncdf4::ncatt_put(nc, "time", "bounds", "time_bounds", prec=NA)
-    varfile <- file(file.path(outdir, paste(y, "nc", "var", sep = ".")), "w")
+    if (is.null(obs.t))
+    {
+      nc      <- ncdf4::nc_create(file.path(outdir, paste(y, ".nc", sep = "")), nc_var)
+      ncdf4::ncatt_put(nc, "time", "bounds", "time_bounds", prec=NA)
+      varfile <- file(file.path(outdir, paste(y,  ".nc.var", sep = "")), "w")
+    } else{
+      nc      <- ncdf4::nc_create(file.path(outdir, paste(date, ".nc", sep = "")), nc_var)
+      ncdf4::ncatt_put(nc, "time", "bounds", "time_bounds", prec=NA)
+      varfile <- file(file.path(outdir, paste(date, ".nc.var", sep = "")), "w")
+    }
+    
     for (i in seq_along(nc_var)) {
       ncdf4::ncvar_put(nc, nc_var[[i]], output[[i]])
       cat(paste(nc_var[[i]]$name, nc_var[[i]]$longname), file = varfile, sep = "\n")

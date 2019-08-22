@@ -25,7 +25,7 @@
 ##' @author Ryan Kelly, David LeBauer, Rob Kooper
 #--------------------------------------------------------------------------------------------------#
 read.ensemble.output <- function(ensemble.size, pecandir, outdir, start.year, end.year, 
-                                 variable, ens.run.ids = NULL) {
+                                 variable, ens.run.ids = NULL, date = NULL) {
   if (is.null(ens.run.ids)) {
     samples.file <- file.path(pecandir, "samples.Rdata")
     if (file.exists(samples.file)) {
@@ -198,7 +198,7 @@ get.ensemble.samples <- function(ensemble.size, pft.samples, env.samples,
 ##' @export
 ##' @author David LeBauer, Carl Davidson, Hamze Dokoohaki
 write.ensemble.configs <- function(defaults, ensemble.samples, settings, model, 
-                                   clean = FALSE, write.to.db = TRUE,restart=NULL) {
+                                   clean = FALSE, write.to.db = TRUE,restart=NULL, obs.t = NULL) {
   
   my.write.config <- paste("write.config.", model, sep = "")
   my.write_restart <- paste0("write_restart.", model)
@@ -286,7 +286,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
       })
     
     # Let's find the PFT based on site location, if it was found I will subset the ensemble.samples otherwise we're not affecting anything    
-    if(!is.null(con)){
+    if (!is.null(con)){
       Pft_Site_df <- dplyr::tbl(con, "sites_cultivars")%>%
         dplyr::filter(site_id == !!settings$run$site$id) %>%
         dplyr::inner_join(dplyr::tbl(con, "cultivars_pfts"), by = "cultivar_id") %>%
@@ -302,7 +302,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
     # Reading the site.pft specific tags from xml
     site.pfts.vec <- settings$run$site$site.pft %>% unlist %>% as.character
     
-    if(!is.null(site.pfts.vec)){
+    if (!is.null(site.pfts.vec)){
       # find the name of pfts defined in the body of pecan.xml
       defined.pfts <- settings$pfts %>% purrr::map('name') %>% unlist %>% as.character
       # subset ensemble samples based on the pfts that are specified in the site and they are also sampled from.
@@ -330,7 +330,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
         paramlist <- paste("ensemble=", i, sep = "")
         # inserting this into the table and getting an id back
         run.id <- PEcAn.DB::db.query(paste0(
-          "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list) ",
+          "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list, obs.t) ",
           "values ('", 
           settings$model$id, "', '", 
           settings$run$site$id, "', '", 
@@ -338,7 +338,8 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
           settings$run$end.date, "', '", 
           settings$run$outdir, "', ", 
           ensemble.id, ", '", 
-          paramlist, "') ",
+          paramlist, ", '",
+          obs.t, "') ",
           "RETURNING id"), con = con)[['id']]
         # associate inputs with runs
         if (!is.null(inputs)) {
@@ -350,9 +351,9 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
         }
         
       } else {
-
+        
         run.id <- PEcAn.utils::get.run.id("ENS", PEcAn.utils::left.pad.zeros(i, 5), site.id=settings$run$site$id)
-
+        
       }
       runs[i, "id"] <- run.id
       
@@ -380,6 +381,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
           "hostname    : ", settings$host$name, "\n",
           "rundir      : ", file.path(settings$host$rundir, run.id), "\n",
           "outdir      : ", file.path(settings$host$outdir, run.id), "\n",
+          "obs.t       : ", obs.t, "\n",
           file = file.path(settings$rundir, run.id, "README.txt"))
       
       #changing the structure of input tag to what the models are expecting
@@ -389,16 +391,17 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
           settings$run$inputs[[input_tag]][["path"]] <-
             samples[[input_tag]][["samples"]][[i]]
       }
-
+      
       
       do.call(my.write.config, args = list( defaults = defaults, 
                                             trait.values = lapply(samples$parameters$samples, function(x, n) { x[n, , drop=FALSE] }, n=i), # this is the params
                                             settings = settings, 
-                                            run.id = run.id
+                                            run.id = run.id,
+                                            obs.t = obs.t
       )
       )
       cat(format(run.id, scientific = FALSE), file = file.path(settings$rundir, "runs.txt"), sep = "\n", append = TRUE)
-
+      
     }
     return(invisible(list(runs = runs, ensemble.id = ensemble.id, samples=samples)))
     #------------------------------------------------- if we already have everything ------------------        
@@ -436,6 +439,7 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
                            settings = settings,
                            new.state = new.state[i, ], 
                            new.params = new.params[[i]], 
+                           obs.t  = obs.t,
                            inputs =list(met=list(path=inputs$samples[[i]])), 
                            RENAME = TRUE)
       )
@@ -449,7 +453,6 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
   
   
 } # write.ensemble.configs
-
 
 
 #' Function for generating samples based on sampling method, parent or etc

@@ -5,7 +5,7 @@
 \title{Write ensemble configs}
 \usage{
 write.ensemble.configs(defaults, ensemble.samples, settings, model,
-  clean = FALSE, write.to.db = TRUE)
+  clean = FALSE, write.to.db = TRUE, date = NULL)
 }
 \arguments{
 \item{defaults}{pft}

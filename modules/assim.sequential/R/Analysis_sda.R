@@ -74,6 +74,16 @@ EnKF<-function(setting, Forecast, Observed, H, extraArg=NULL, ...){
   if (length(Y) > 1) {
     
     PEcAn.logger::logger.info("The zero variances in R and Pf is being replaced by half and one fifth of the minimum variance in those matrices respectively.")
+   if (all(diag(R) == 0))
+   {
+     #filler number for now. SHould figure out a more suitable error number for case where all sd's are 0 (which shouldn't happen... but could). Same
+     # with Pf.
+     diag(R) = 0.1
+   }
+    if (all(diag(Pf) == 0))
+    {
+      diag(Pf) = 0.1
+    }
     diag(R)[which(diag(R)==0)] <- min(diag(R)[which(diag(R) != 0)])/2
     diag(Pf)[which(diag(Pf)==0)] <- min(diag(Pf)[which(diag(Pf) != 0)])/5
   }

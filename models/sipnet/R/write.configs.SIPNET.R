@@ -14,7 +14,7 @@
 ##' @export
 ##' @author Michael Dietze
 write.config.SIPNET <- function(defaults, trait.values, settings, run.id, inputs = NULL, IC = NULL,
-                                restart = NULL, spinup = NULL) {
+                                restart = NULL, spinup = NULL, obs.t = NULL) {
   ### WRITE sipnet.in
   template.in <- system.file("sipnet.in", package = "PEcAn.SIPNET")
   config.text <- readLines(con = template.in, n = -1)
@@ -78,6 +78,11 @@ write.config.SIPNET <- function(defaults, trait.values, settings, run.id, inputs
   
   jobsh <- gsub("@BINARY@", settings$model$binary, jobsh)
   jobsh <- gsub("@REVISION@", settings$model$revision, jobsh)
+  
+  if (!(is.null(obs.t)))
+  {
+    jobsh <-gsub("@OBST@", obs.t, jobsh)
+  }
   
   if (is.null(settings$model$delete.raw)) {
     settings$model$delete.raw <- FALSE

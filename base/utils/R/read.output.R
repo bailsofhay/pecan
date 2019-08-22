@@ -60,6 +60,7 @@
 read.output <- function(runid, outdir,
                         start.year = NA,
                         end.year = NA,
+                        obs.t = NULL,
                         variables = "GPP",
                         dataframe = FALSE,
                         pft.name = NULL,
@@ -86,15 +87,24 @@ read.output <- function(runid, outdir,
 
   # create list of *.nc years - look only for files formatted as
   # YYYY.nc, the default pecan output file name standard
-  if (is.null(ncfiles)) {
+  if (is.null(ncfiles) & is.null(obs.t)) {
+    #ncfiles_sub <- list.files(path = outdir, pattern = paste0(as.character(start.year), ".{6}.nc$"), full.names = FALSE)
     ncfiles_sub <- list.files(path = outdir, pattern = "^-?[[:digit:]]{4}\\.nc$", full.names = FALSE)
     ncfiles <- file.path(outdir, ncfiles_sub)
-  } else {
+    } 
+  if (is.null(ncfiles) & (!(is.null(obs.t))))
+    {
+    ncfiles_sub <- list.files(path = outdir, pattern = paste0(gsub("-", "_", as.character(obs.t)), ".nc$"), full.names = FALSE)
+    ncfiles <- file.path(outdir, ncfiles_sub)
+    }
+  if (!is.null(ncfiles))
+  {
     # Assume the NetCDF files follow the PEcAn standard format
     # (`YYYY.nc`). If they do not, pass `start.year` and `end.year`
     # explicitly.
     ncfiles_sub <- basename(ncfiles)
   }
+
 
   if (!is.na(start.year)) {
     if (lubridate::is.instant(start.year)) { # true if a Date, POSIXct, or POSIXlt
@@ -138,12 +148,19 @@ read.output <- function(runid, outdir,
   nc_years <- suppressWarnings(
     as.numeric(gsub("^(-?[[:digit:]]{4})\\.nc", "\\1", ncfiles_sub))
   )
-  if (any(is.na(nc_years))) {
+  if (any(is.na(nc_years)) & is.null(obs.t)) {
     PEcAn.logger::logger.debug(
       "Unable to deduce NetCDF file years from their names. ",
       "Setting `nc_years` to length 0 numeric vector."
     )
     nc_years <- numeric()
+  }
+  
+  if (any(is.na(nc_years)) & (!(is.null(obs.t)))) 
+  {
+    nc_years = suppressWarnings(
+      as.numeric(substr(ncfiles_sub, 1, 4))
+    )
   }
 
   if (is.na(start.year)) {
