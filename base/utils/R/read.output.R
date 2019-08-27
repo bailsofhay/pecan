@@ -72,6 +72,7 @@ read.output <- function(runid, outdir,
   ## cflux = c('GPP', 'NPP', 'NEE', 'TotalResp', 'AutoResp', 'HeteroResp', 'DOC_flux', 'Fire_flux') # kgC m-2 s-1
   ## wflux = c('Evap', 'TVeg', 'Qs', 'Qsb', 'Rainf') # kgH20 m-2 d-1
 
+  day_of_year = as.integer(format(as.Date(obs.t), "%j"))
   if ((missing(runid) || missing(outdir)) && is.null(ncfiles)) {
     PEcAn.logger::logger.severe(
       "`runid` or `outdir` is missing, and `ncfiles` is NULL.",
@@ -233,7 +234,7 @@ read.output <- function(runid, outdir,
           paste(variables, collapse = ", ")
         )
       }
-
+      
       if (dataframe) {
         seconds <- udunits2::ud.convert(
           nc$dim$time$vals,
@@ -243,12 +244,17 @@ read.output <- function(runid, outdir,
         result[["posix"]] <- abind::abind(result[["posix"]], seconds)
       }
       for (v in variables) {
+        var_times = nc$var[[which(names(nc$var) == v)]]
+        var_times = var_times$dim[[3]][[10]]
+        keep = which(as.integer(floor(var_times)) == day_of_year)
+        
         if (verbose) PEcAn.logger::logger.debug("Processing variable: ", v)
         if (!(v %in% c(names(nc$var), names(nc$dim)))) {
           PEcAn.logger::logger.warn(paste(v, "missing in", ncfile))
           next
         }
-        newresult <- ncdf4::ncvar_get(nc, v, verbose = verbose)
+        newresult <- ncdf4::ncvar_get(nc, v, verbose = verbose)[keep]
+        #newresult <- ncdf4::ncvar_get(nc, v, verbose = verbose)[keep]
         # begin per-pft read
         # check if the variable has 'pft' as a dimension
         if ("pft" %in% sapply(nc$var[[v]]$dim, `[[`, "name")) {
@@ -287,7 +293,7 @@ read.output <- function(runid, outdir,
       }
       ncdf4::nc_close(nc)
     }
-
+  
     if (print_summary) {
       result_means <- vapply(result, mean, numeric(1), na.rm = TRUE)
       result_medians <- vapply(result, median, numeric(1), na.rm = TRUE)
@@ -319,8 +325,10 @@ read.output <- function(runid, outdir,
   }
 
   model <- as.data.frame(result) # put into a data.frame
-  model[["posix"]] <- as.POSIXct(model[["posix"]], origin = run_origin, tz = "UTC")
-  model[["year"]] <- lubridate::year(model[["posix"]])
+  model$posix = obs.t
+  model$year = lubridate::year(obs.t)
+  #model[["posix"]] <- as.POSIXct(model[["posix"]], origin = run_origin, tz = "UTC")
+  #model[["year"]] <- lubridate::year(model[["posix"]])
 
   return(model)
 } # read.output

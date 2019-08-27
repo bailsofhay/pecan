@@ -198,7 +198,7 @@ get.ensemble.samples <- function(ensemble.size, pft.samples, env.samples,
 ##' @export
 ##' @author David LeBauer, Carl Davidson, Hamze Dokoohaki
 write.ensemble.configs <- function(defaults, ensemble.samples, settings, model, 
-                                   clean = FALSE, write.to.db = TRUE,restart=NULL, obs.t = NULL) {
+                                   clean = FALSE, write.to.db = TRUE,restart=NULL) {
   
   my.write.config <- paste("write.config.", model, sep = "")
   my.write_restart <- paste0("write_restart.", model)
@@ -330,16 +330,15 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
         paramlist <- paste("ensemble=", i, sep = "")
         # inserting this into the table and getting an id back
         run.id <- PEcAn.DB::db.query(paste0(
-          "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list, obs.t) ",
+          "INSERT INTO runs (model_id, site_id, start_time, finish_time, outdir, ensemble_id, parameter_list) ",
           "values ('", 
           settings$model$id, "', '", 
           settings$run$site$id, "', '", 
           settings$run$start.date, "', '", 
           settings$run$end.date, "', '", 
           settings$run$outdir, "', ", 
-          ensemble.id, ", '", 
-          paramlist, ", '",
-          obs.t, "') ",
+          ensemble.id, "', '", 
+          paramlist,  "') ",
           "RETURNING id"), con = con)[['id']]
         # associate inputs with runs
         if (!is.null(inputs)) {
@@ -381,7 +380,6 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
           "hostname    : ", settings$host$name, "\n",
           "rundir      : ", file.path(settings$host$rundir, run.id), "\n",
           "outdir      : ", file.path(settings$host$outdir, run.id), "\n",
-          "obs.t       : ", obs.t, "\n",
           file = file.path(settings$rundir, run.id, "README.txt"))
       
       #changing the structure of input tag to what the models are expecting
@@ -392,12 +390,10 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
             samples[[input_tag]][["samples"]][[i]]
       }
       
-      
       do.call(my.write.config, args = list( defaults = defaults, 
                                             trait.values = lapply(samples$parameters$samples, function(x, n) { x[n, , drop=FALSE] }, n=i), # this is the params
                                             settings = settings, 
-                                            run.id = run.id,
-                                            obs.t = obs.t
+                                            run.id = run.id
       )
       )
       cat(format(run.id, scientific = FALSE), file = file.path(settings$rundir, "runs.txt"), sep = "\n", append = TRUE)
@@ -439,7 +435,6 @@ write.ensemble.configs <- function(defaults, ensemble.samples, settings, model,
                            settings = settings,
                            new.state = new.state[i, ], 
                            new.params = new.params[[i]], 
-                           obs.t  = obs.t,
                            inputs =list(met=list(path=inputs$samples[[i]])), 
                            RENAME = TRUE)
       )

@@ -5,7 +5,7 @@
 \title{write_restart.SIPNET}
 \usage{
 write_restart.SIPNET(outdir, runid, start.time, stop.time, settings,
-  new.state, RENAME = TRUE, new.params = FALSE, inputs, date = NULL)
+  new.state, RENAME = TRUE, new.params = FALSE, inputs, obs.t = NULL)
 }
 \arguments{
 \item{outdir}{output directory}

@@ -5,7 +5,7 @@
 \title{Function to convert SIPNET model output to standard netCDF format}
 \usage{
 model2netcdf.SIPNET(outdir, sitelat, sitelon, start_date, end_date,
-  delete.raw, revision, overwrite = FALSE, obs.t = NULL)
+  delete.raw, revision, overwrite = F)
 }
 \arguments{
 \item{outdir}{Location of SIPNET model output}
@@ -30,5 +30,6 @@ Converts all output contained in a folder to netCDF.
 }
 \author{
 Shawn Serbin, Michael Dietze
-    model2netcdf.SIPNET('/data/bmorrison/sda/lai/4_sites_8_days/out/ENS-00001-676', 45.805925, -90.07961, '1980-01-01', '2009-12-31', FALSE, 'r136')
+
+    model2netcdf.SIPNET('/data/bmorrison/sda/lai/4_sites_8_days/out/ENS-00001-676', 45.805925, -90.07961, '2000-02-18', '2009-12-27', FALSE, 'r136', '2000_02_18')
 }

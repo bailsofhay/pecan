@@ -5,8 +5,7 @@
 \title{Writes a configuration files for SIPNET model}
 \usage{
 write.config.SIPNET(defaults, trait.values, settings, run.id,
-  inputs = NULL, IC = NULL, restart = NULL, spinup = NULL,
-  obs.t = NULL)
+  inputs = NULL, IC = NULL, restart = NULL, spinup = NULL)
 }
 \description{
 Writes a configuration files for your model
